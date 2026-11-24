@@ -1,0 +1,269 @@
+/* ==========================================================================
+   Cozy Pixel Art Loy Krathong Co-op Stylesheet
+   ========================================================================== */
+
+/* Font definitions */
+.font-pixel {
+  font-family: 'Silkscreen', 'Press Start 2P', monospace;
+}
+.font-thai {
+  font-family: 'Mali', 'Prompt', sans-serif;
+}
+
+/* Background Night Sky with Deep Gradient */
+body {
+  background: radial-gradient(circle at 50% 10%, #171b38 0%, #0c1024 45%, #050711 100%);
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+  color: #fef3c7;
+  overflow-x: hidden;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* Custom Pixel Shadows & Glows */
+.shadow-glow-amber {
+  box-shadow: 0 0 15px rgba(251, 191, 36, 0.45), 0 0 30px rgba(245, 158, 11, 0.25);
+}
+.shadow-moon-glow {
+  box-shadow: 0 0 35px rgba(254, 240, 138, 0.6), 0 0 70px rgba(253, 224, 71, 0.3);
+}
+.text-glow-gold {
+  text-shadow: 0 0 8px rgba(251, 191, 36, 0.8), 0 0 18px rgba(245, 158, 11, 0.5);
+}
+
+/* Screen Management */
+.screen-view {
+  display: none;
+  opacity: 0;
+  transition: opacity 0.3s ease-in-out;
+}
+.screen-view.active {
+  display: flex;
+  opacity: 1;
+}
+
+/* Modal Backdrop */
+.modal-backdrop:not(.hidden) {
+  display: flex;
+  animation: fadeIn 0.25s ease-out forwards;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: scale(0.98); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+/* Pixel Buttons */
+.pixel-btn {
+  position: relative;
+  border-width: 2px;
+  border-style: solid;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  image-rendering: pixelated;
+}
+.pixel-btn:active {
+  transform: translateY(2px);
+}
+
+.pixel-btn-primary {
+  background: linear-gradient(180deg, #f59e0b 0%, #d97706 100%);
+  border-color: #fef08a #b45309 #78350f #fde047;
+  color: #0f172a;
+  font-weight: 700;
+  box-shadow: 0 4px 0 #78350f, 0 8px 12px rgba(0, 0, 0, 0.4);
+}
+.pixel-btn-primary:hover {
+  background: linear-gradient(180deg, #fbbf24 0%, #f59e0b 100%);
+  box-shadow: 0 4px 0 #78350f, 0 0 15px rgba(251, 191, 36, 0.6);
+}
+.pixel-btn-primary:active {
+  box-shadow: 0 1px 0 #78350f;
+  transform: translateY(3px);
+}
+
+.pixel-btn-secondary {
+  background: linear-gradient(180deg, #334155 0%, #1e293b 100%);
+  border-color: #64748b #0f172a #020617 #475569;
+  color: #f8fafc;
+  box-shadow: 0 3px 0 #0f172a;
+}
+.pixel-btn-secondary:hover {
+  background: linear-gradient(180deg, #475569 0%, #334155 100%);
+}
+.pixel-btn-secondary:active {
+  box-shadow: 0 1px 0 #0f172a;
+  transform: translateY(2px);
+}
+
+.pixel-btn-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: rgba(30, 41, 59, 0.8);
+  border: 1px solid rgba(251, 191, 36, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.pixel-btn-icon:hover {
+  background: rgba(51, 65, 85, 0.9);
+  border-color: #fbbf24;
+  transform: scale(1.05);
+}
+
+/* Avatar Option Buttons */
+.avatar-option {
+  width: 44px;
+  height: 44px;
+  font-size: 20px;
+  border-radius: 12px;
+  background: #0f172a;
+  border: 2px solid #334155;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.avatar-option:hover {
+  border-color: #f59e0b;
+  transform: scale(1.08);
+}
+.avatar-option.selected {
+  border-color: #f59e0b;
+  background: rgba(245, 158, 11, 0.2);
+  box-shadow: 0 0 10px rgba(245, 158, 11, 0.4);
+}
+
+/* Workshop Tool Cards */
+.tool-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 4px;
+  background: rgba(15, 23, 42, 0.85);
+  border: 1.5px solid #334155;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+.tool-card:hover {
+  border-color: #fbbf24;
+  background: rgba(30, 41, 59, 0.95);
+  transform: translateY(-2px);
+}
+.tool-card.selected, .tool-card.active-item {
+  border-color: #f59e0b;
+  background: rgba(245, 158, 11, 0.18);
+  box-shadow: 0 0 8px rgba(245, 158, 11, 0.4);
+}
+
+.tool-preview {
+  image-rendering: pixelated;
+  margin-bottom: 2px;
+}
+.tool-title {
+  font-family: 'Mali', sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  color: #fde68a;
+  line-height: 1.2;
+}
+.tool-sub {
+  font-size: 9px;
+  color: #94a3b8;
+}
+
+/* Reaction Buttons */
+.reaction-btn {
+  font-size: 18px;
+  padding: 6px;
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.reaction-btn:hover {
+  border-color: #f472b6;
+  transform: scale(1.15);
+}
+.reaction-btn:active {
+  transform: scale(0.9);
+}
+
+/* Toast Messages */
+.toast-msg {
+  background: rgba(15, 23, 42, 0.95);
+  border: 1px solid #f59e0b;
+  color: #fef08a;
+  padding: 6px 14px;
+  border-radius: 9999px;
+  font-family: 'Mali', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+  animation: toastFade 2.5s ease-in-out forwards;
+}
+
+@keyframes toastFade {
+  0% { opacity: 0; transform: translateY(-10px); }
+  15% { opacity: 1; transform: translateY(0); }
+  85% { opacity: 1; transform: translateY(0); }
+  100% { opacity: 0; transform: translateY(-15px); }
+}
+
+/* Interactive Match Hold Animations */
+.match-holding {
+  border-color: #f59e0b !important;
+  background: rgba(245, 158, 11, 0.3) !important;
+  box-shadow: 0 0 15px rgba(245, 158, 11, 0.8) !important;
+  animation: matchWiggle 0.1s infinite alternate;
+}
+
+@keyframes matchWiggle {
+  from { transform: rotate(-3deg) scale(1.05); }
+  to { transform: rotate(3deg) scale(1.05); }
+}
+
+.spark-ignited {
+  animation: sparkBurst 0.6s ease-out forwards;
+}
+
+@keyframes sparkBurst {
+  0% { transform: scale(1); filter: brightness(1); }
+  50% { transform: scale(2.2); filter: brightness(2.5); box-shadow: 0 0 40px #f59e0b; }
+  100% { transform: scale(1.5); filter: brightness(1.5); }
+}
+
+/* Floating animation for lanterns and moon */
+@keyframes floatBob {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-8px); }
+}
+.animate-float {
+  animation: floatBob 4s ease-in-out infinite;
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #090d16;
+}
+::-webkit-scrollbar-thumb {
+  background: #28334e;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #4a5c88;
+}
