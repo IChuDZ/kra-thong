@@ -1,0 +1,1421 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Loy Krathong Co-op • ลอยกระทงเคียงข้างกัน</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Mali:ital,wght@0,300;0,400;0,500;0,600;1,400&family=Prompt:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+
+  <style>
+    :root {
+      --night-bg: #070b16;
+      --card-bg: rgba(14, 21, 38, 0.72);
+      --card-border: rgba(254, 240, 138, 0.12);
+      --gold-glow: rgba(245, 158, 11, 0.35);
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      font-family: 'Prompt', sans-serif;
+      background: radial-gradient(circle at 50% 8%, #141f3d 0%, #0a1024 45%, #050813 100%);
+      color: #f8fafc;
+      min-height: 100vh;
+      margin: 0;
+      overflow-x: hidden;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    .font-hand { font-family: 'Mali', cursive; }
+
+    .cozy-glass {
+      background: var(--card-bg);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--card-border);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.36);
+    }
+
+    .gold-border-glow {
+      box-shadow: 0 0 20px rgba(245, 158, 11, 0.25), inset 0 0 12px rgba(254, 240, 138, 0.1);
+    }
+
+    .candle-bloom {
+      box-shadow: 0 0 28px rgba(251, 191, 36, 0.6), 0 0 60px rgba(245, 158, 11, 0.3);
+    }
+
+    @keyframes gentleFloat {
+      0%, 100% { transform: translateY(0px) rotate(0deg); }
+      50% { transform: translateY(-6px) rotate(0.5deg); }
+    }
+    .animate-float { animation: gentleFloat 5s ease-in-out infinite; }
+
+    @keyframes pulseAura {
+      0%, 100% { opacity: 0.55; transform: scale(1); }
+      50% { opacity: 0.85; transform: scale(1.04); }
+    }
+    .animate-aura { animation: pulseAura 3.6s ease-in-out infinite; }
+
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar { width: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.12); border-radius: 99px; }
+  </style>
+</head>
+<body class="selection:bg-amber-400/20 selection:text-amber-200">
+
+  <!-- Ambient Stars & Moon Background Canvas -->
+  <canvas id="sky-canvas" class="fixed inset-0 pointer-events-none z-0"></canvas>
+
+  <!-- Navigation / Header -->
+  <header class="fixed top-0 left-0 right-0 z-40 h-16 border-b border-amber-500/10 cozy-glass flex items-center justify-between px-6">
+    <div class="flex items-center gap-3">
+      <div class="w-9 h-9 rounded-full bg-gradient-to-tr from-amber-600/30 to-amber-300/10 border border-amber-400/30 flex items-center justify-center text-lg shadow-sm">
+        🪷
+      </div>
+      <div>
+        <h1 class="text-sm font-semibold tracking-wider text-amber-100">LOY KRATHONG CO-OP</h1>
+        <p class="text-[11px] text-amber-200/60 font-hand -mt-0.5">ลอยกระทงออนไลน์เคียงข้างกัน</p>
+      </div>
+    </div>
+
+    <div class="flex items-center gap-3">
+      <!-- Active Room Pill -->
+      <div id="room-tag" class="hidden items-center gap-2.5 px-3.5 py-1.5 rounded-full bg-slate-900/80 border border-amber-400/25 text-xs font-mono text-amber-200">
+        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+        <span id="room-code-label">ROOM: ----</span>
+        <button id="btn-copy-link" class="text-[11px] px-2 py-0.5 rounded bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 transition">
+          คัดลอกลิงก์
+        </button>
+      </div>
+
+      <!-- Audio Mute Toggle -->
+      <button id="btn-audio" class="w-9 h-9 rounded-full border border-white/10 hover:border-amber-400/40 flex items-center justify-center text-sm text-slate-300 hover:text-amber-200 transition bg-slate-900/50">
+        <span id="audio-icon">🔇</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Partner Live Cursor -->
+  <div id="partner-cursor" class="fixed pointer-events-none z-50 hidden transition-transform duration-75 ease-out">
+    <div class="relative">
+      <div class="w-4 h-4 rounded-full bg-gradient-to-r from-amber-400 to-pink-400 shadow-[0_0_14px_#f59e0b] border-2 border-white"></div>
+      <div id="partner-cursor-label" class="absolute left-5 -top-1 bg-slate-950/90 border border-amber-400/40 text-amber-200 text-[11px] px-2.5 py-0.5 rounded-full whitespace-nowrap shadow-lg font-hand">
+        Partner
+      </div>
+    </div>
+  </div>
+
+  <!-- Notification Toast -->
+  <div id="toast-shelf" class="fixed top-20 left-1/2 -translate-x-1/2 z-50 pointer-events-none flex flex-col items-center gap-2"></div>
+
+
+  <!-- ===================================================================== -->
+  <!-- 1. LOBBY SCREEN -->
+  <!-- ===================================================================== -->
+  <main id="view-lobby" class="relative z-10 pt-28 pb-16 min-h-screen flex flex-col items-center justify-center px-4">
+    
+    <!-- Hero Moon Artwork -->
+    <div class="relative text-center mb-8">
+      <div class="w-28 h-28 mx-auto rounded-full bg-gradient-to-b from-amber-100 via-amber-200 to-amber-400/80 shadow-[0_0_80px_rgba(254,240,138,0.45)] border border-amber-200 flex items-center justify-center relative overflow-hidden animate-float">
+        <!-- Moon texture -->
+        <div class="absolute w-8 h-8 rounded-full bg-amber-300/40 top-3 left-4"></div>
+        <div class="absolute w-12 h-12 rounded-full bg-amber-300/30 bottom-2 right-3"></div>
+      </div>
+      <h2 class="text-3xl md:text-4xl font-light tracking-wide text-amber-100 mt-6 font-hand">
+        คืนวันเพ็ญเดือนสิบสอง
+      </h2>
+      <p class="text-xs md:text-sm text-slate-300/80 mt-2 font-hand max-w-sm mx-auto leading-relaxed">
+        ชวนคนพิเศษมาช่วยกันประดิษฐ์กระทง เขียนคำอธิษฐานร่วมกัน และจุดเทียนลอยสู่สายน้ำเจ้าพระยา
+      </p>
+    </div>
+
+    <!-- Join/Create Card -->
+    <div class="w-full max-w-md cozy-glass rounded-3xl p-7 gold-border-glow relative overflow-hidden">
+      <!-- Player Nickname -->
+      <div class="mb-5">
+        <label class="block text-xs font-hand text-amber-200/90 mb-1.5">ชื่อเล่นของคุณ</label>
+        <div class="flex items-center gap-2">
+          <input id="input-player-name" type="text" maxlength="14" placeholder="เช่น มีนา, ตะวัน" value="ฉัน"
+            class="flex-1 bg-slate-950/70 border border-white/10 rounded-2xl px-4 py-2.5 text-sm text-amber-100 placeholder-slate-500 focus:outline-none focus:border-amber-400 font-hand">
+          <div id="avatar-pill" class="text-2xl px-3 py-1.5 rounded-2xl bg-amber-500/10 border border-amber-400/30 cursor-pointer" title="สุ่มรูปแทนตัวเอง">
+            🌸
+          </div>
+        </div>
+      </div>
+
+      <!-- Action Choice -->
+      <div class="space-y-3 pt-2 border-t border-white/10">
+        <button id="btn-create-room" class="w-full py-3 rounded-2xl bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-slate-950 font-medium text-xs tracking-wider transition shadow-lg flex items-center justify-center gap-2">
+          <span>🏮</span>
+          <span>สร้างห้องคู่หู (Create Room)</span>
+        </button>
+
+        <div class="flex items-center gap-2">
+          <input id="input-join-code" type="text" placeholder="ใส่รหัสห้อง 4 หลัก" maxlength="4"
+            class="flex-1 bg-slate-950/70 border border-white/10 rounded-2xl px-3.5 py-2.5 text-center text-xs font-mono uppercase tracking-widest text-amber-200 placeholder-slate-500 focus:outline-none focus:border-amber-400">
+          <button id="btn-join-room" class="px-5 py-2.5 rounded-2xl border border-white/15 hover:border-amber-400/60 text-xs font-medium text-amber-200 transition bg-slate-900/60">
+            เข้าร่วม
+          </button>
+        </div>
+      </div>
+
+      <!-- Solo Option -->
+      <div class="mt-5 pt-3 border-t border-white/5 text-center">
+        <button id="btn-solo-mode" class="text-xs text-slate-400 hover:text-amber-300 font-hand transition">
+          อยากลอยคนเดียวอย่างสงบสุข &rarr;
+        </button>
+      </div>
+    </div>
+  </main>
+
+
+  <!-- ===================================================================== -->
+  <!-- 2. WORKSHOP SCREEN (Co-op Crafting Table) -->
+  <!-- ===================================================================== -->
+  <main id="view-workshop" class="hidden relative z-10 pt-20 pb-10 min-h-screen max-w-6xl mx-auto px-4 flex flex-col">
+    
+    <!-- Top Step Bar -->
+    <div class="cozy-glass rounded-2xl px-5 py-3 mb-4 flex flex-wrap items-center justify-between gap-3 text-xs">
+      <div class="flex items-center gap-2 font-hand">
+        <span id="partner-status-dot" class="w-2.5 h-2.5 rounded-full bg-slate-500"></span>
+        <span id="partner-status-text" class="text-amber-200/90">กำลังรอคู่หู...</span>
+      </div>
+
+      <div class="flex items-center gap-2 font-hand">
+        <button id="btn-undo-item" class="px-3.5 py-1.5 rounded-xl border border-white/10 hover:border-white/20 text-slate-300 text-xs transition">
+          ↩️ ย้อนกลับ
+        </button>
+        <button id="btn-clear-canvas" class="px-3.5 py-1.5 rounded-xl border border-rose-500/20 hover:border-rose-500/40 text-rose-300 text-xs transition">
+          🗑️ ล้างใหม่
+        </button>
+        <button id="btn-open-light-modal" class="px-5 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 text-slate-950 font-medium text-xs shadow-md transition flex items-center gap-1.5">
+          <span>🕯️</span>
+          <span>ไปเขียนคำอธิษฐาน & จุดเทียน &rarr;</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Crafting Layout: Left Palette | Center Canvas | Right Wishes -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 flex-1 items-start">
+      
+      <!-- LEFT: Decorative Tray Palette -->
+      <aside class="lg:col-span-3 cozy-glass rounded-3xl p-5 space-y-4 text-xs">
+        <div>
+          <span class="text-amber-300/80 font-hand text-xs font-semibold block mb-2">🪵 1. ฐานกระทง (Base)</span>
+          <div class="grid grid-cols-3 gap-2" id="base-selector">
+            <button class="base-pill active p-2 rounded-xl border border-amber-400 bg-amber-400/15 text-amber-200 text-center font-hand" data-base="banana">
+              ใบตอง
+            </button>
+            <button class="base-pill p-2 rounded-xl border border-white/10 hover:border-white/20 text-slate-300 text-center font-hand" data-base="bread">
+              ขนมปัง
+            </button>
+            <button class="base-pill p-2 rounded-xl border border-white/10 hover:border-white/20 text-slate-300 text-center font-hand" data-base="ice">
+              น้ำแข็ง
+            </button>
+          </div>
+        </div>
+
+        <div>
+          <span class="text-amber-300/80 font-hand text-xs font-semibold block mb-2">🍃 2. กลีบกระทง</span>
+          <div class="grid grid-cols-2 gap-2" id="petal-selector">
+            <button class="item-pill active p-2.5 rounded-xl border border-amber-400 bg-amber-400/15 text-amber-200 text-center font-hand" data-type="petal_folded">
+              กลีบผกา
+            </button>
+            <button class="item-pill p-2.5 rounded-xl border border-white/10 hover:border-white/20 text-slate-300 text-center font-hand" data-type="petal_lotus">
+              กลีบบัวชมพู
+            </button>
+          </div>
+        </div>
+
+        <div>
+          <span class="text-amber-300/80 font-hand text-xs font-semibold block mb-2">🌸 3. ดอกไม้มงคล</span>
+          <div class="grid grid-cols-2 gap-2" id="flower-selector">
+            <button class="item-pill p-2 rounded-xl border border-white/10 hover:border-white/20 text-slate-300 text-center font-hand" data-type="flower_marigold">
+              🌼 ดาวเรือง
+            </button>
+            <button class="item-pill p-2 rounded-xl border border-white/10 hover:border-white/20 text-slate-300 text-center font-hand" data-type="flower_lotus">
+              🪷 บัวหลวง
+            </button>
+            <button class="item-pill p-2 rounded-xl border border-white/10 hover:border-white/20 text-slate-300 text-center font-hand" data-type="flower_orchid">
+              🌺 กล้วยไม้
+            </button>
+            <button class="item-pill p-2 rounded-xl border border-white/10 hover:border-white/20 text-slate-300 text-center font-hand" data-type="flower_crown">
+              🤍 ดอกรัก
+            </button>
+          </div>
+        </div>
+
+        <div>
+          <span class="text-amber-300/80 font-hand text-xs font-semibold block mb-2">🕯️ 4. เครื่องสักการะ</span>
+          <div class="grid grid-cols-2 gap-2">
+            <button class="item-pill p-2 rounded-xl border border-white/10 hover:border-white/20 text-slate-300 text-center font-hand" data-type="candle">
+              เทียนทอง
+            </button>
+            <button class="item-pill p-2 rounded-xl border border-white/10 hover:border-white/20 text-slate-300 text-center font-hand" data-type="incense">
+              ธูปสามดอก
+            </button>
+          </div>
+        </div>
+      </aside>
+
+      <!-- CENTER: Candlelit Water Pier Craft Canvas -->
+      <div class="lg:col-span-6 flex flex-col items-center">
+        <div class="relative w-full aspect-square max-w-[460px] rounded-3xl cozy-glass p-3 flex items-center justify-center gold-border-glow overflow-hidden">
+          
+          <!-- Subtle water circle backdrop -->
+          <div class="absolute inset-4 rounded-full bg-gradient-to-b from-sky-950/40 to-slate-950 border border-cyan-500/10 pointer-events-none"></div>
+
+          <!-- Canvas -->
+          <canvas id="craft-canvas" width="440" height="440" class="relative z-10 rounded-2xl cursor-crosshair touch-none"></canvas>
+
+          <!-- Hint -->
+          <div class="absolute bottom-4 z-20 text-[11px] font-hand text-amber-200/90 bg-slate-950/80 border border-amber-400/20 px-4 py-1 rounded-full pointer-events-none backdrop-blur-sm">
+            ✨ คลิกบนกระทงเพื่อจัดวางสิ่งของ
+          </div>
+        </div>
+
+        <!-- Quick Arrange helper -->
+        <div class="flex items-center gap-2 mt-3 font-hand text-xs text-slate-400">
+          <span>ตัวช่วยจัดเร็ว:</span>
+          <button id="btn-quick-ring" class="px-3 py-1 rounded-full bg-slate-900/80 border border-white/10 hover:border-amber-400/40 text-amber-300 transition">
+            🌸 ล้อมกลีบรอบกระทง
+          </button>
+          <button id="btn-quick-scatter" class="px-3 py-1 rounded-full bg-slate-900/80 border border-white/10 hover:border-pink-400/40 text-pink-300 transition">
+            🌼 โปรยดอกไม้
+          </button>
+        </div>
+      </div>
+
+      <!-- RIGHT: Creators & Shared Blessings -->
+      <aside class="lg:col-span-3 cozy-glass rounded-3xl p-5 space-y-4 text-xs font-hand">
+        <span class="text-amber-300/80 font-hand text-xs font-semibold block">ผู้ร่วมสร้างสรรค์ & คำอธิษฐาน</span>
+
+        <!-- Self Wish Box -->
+        <div class="p-3.5 rounded-2xl bg-slate-950/60 border border-amber-500/20 space-y-2">
+          <div class="flex items-center justify-between">
+            <span class="text-amber-200 font-semibold" id="label-self-name">🌸 ฉัน</span>
+            <span class="text-[10px] text-emerald-400 font-mono">ONLINE</span>
+          </div>
+          <textarea id="box-self-wish" rows="2" maxlength="80" placeholder="พิมพ์คำอธิษฐานของคุณที่นี่..."
+            class="w-full bg-slate-900/90 border border-white/10 rounded-xl p-2.5 text-xs text-amber-100 placeholder-slate-500 focus:outline-none focus:border-amber-400 font-hand"></textarea>
+        </div>
+
+        <!-- Partner Wish Box -->
+        <div class="p-3.5 rounded-2xl bg-slate-950/60 border border-pink-500/20 space-y-1.5">
+          <div class="flex items-center justify-between">
+            <span class="text-pink-200 font-semibold" id="label-partner-name">🌙 คู่หู</span>
+            <span id="pill-partner-status" class="text-[10px] text-slate-500 font-mono">WAITING</span>
+          </div>
+          <p id="text-partner-wish" class="text-xs text-pink-100/90 italic p-2 rounded-xl bg-slate-900/50 border border-white/5 min-h-[44px]">
+            "กำลังรอเพื่อนเขียนคำอธิษฐาน..."
+          </p>
+        </div>
+
+        <!-- Stats summary -->
+        <div class="p-3 rounded-xl bg-slate-950/40 border border-white/5 text-[11px] text-slate-400 space-y-1">
+          <div class="flex justify-between">
+            <span>ชิ้นส่วนกระทง:</span>
+            <span id="stat-items" class="text-amber-300 font-mono">0 ชิ้น</span>
+          </div>
+          <div class="flex justify-between">
+            <span>ธูปและเทียน:</span>
+            <span id="stat-sacred" class="text-amber-400 font-hand">ยังไม่ครบ</span>
+          </div>
+        </div>
+      </aside>
+
+    </div>
+  </main>
+
+
+  <!-- ===================================================================== -->
+  <!-- 3. SACRED MATCH HOLD CEREMONY MODAL -->
+  <!-- ===================================================================== -->
+  <div id="modal-light" class="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md hidden flex items-center justify-center p-4">
+    <div class="w-full max-w-md cozy-glass rounded-3xl p-7 text-center space-y-6 gold-border-glow">
+      <div>
+        <div class="text-3xl mb-1">🕯️✨</div>
+        <h3 class="text-lg font-light tracking-wide text-amber-100 font-hand">จุดเทียนบูชาพระแม่คงคา</h3>
+        <p class="text-xs text-slate-300/80 mt-1 font-hand">
+          กดปุ่ม <span class="text-amber-400 font-bold">"จุดไฟค้างไว้"</span> พร้อมกันทั้งสองคน เพื่อให้เปลวไฟสว่างไสว
+        </p>
+      </div>
+
+      <!-- Match Visuals -->
+      <div class="flex items-center justify-center gap-8 py-2">
+        <div class="flex flex-col items-center gap-1.5">
+          <div id="visual-match-p1" class="w-14 h-14 rounded-2xl border border-white/15 bg-slate-900/80 flex items-center justify-center text-2xl transition-all duration-150">
+            🪵
+          </div>
+          <span class="text-xs font-hand text-slate-300" id="label-match-p1">คุณ</span>
+        </div>
+
+        <div class="relative flex items-center justify-center">
+          <div id="visual-spark" class="w-16 h-16 rounded-full bg-amber-400/10 border border-amber-400/30 flex items-center justify-center text-2xl transition-all duration-300">
+            ✨
+          </div>
+        </div>
+
+        <div class="flex flex-col items-center gap-1.5">
+          <div id="visual-match-p2" class="w-14 h-14 rounded-2xl border border-white/15 bg-slate-900/80 flex items-center justify-center text-2xl transition-all duration-150">
+            🪵
+          </div>
+          <span class="text-xs font-hand text-slate-300" id="label-match-p2">เพื่อน</span>
+        </div>
+      </div>
+
+      <!-- The Big Hold Button -->
+      <button id="btn-strike-hold" class="w-full py-4 rounded-2xl bg-gradient-to-r from-amber-600 via-amber-500 to-yellow-400 hover:from-amber-500 text-slate-950 font-bold text-xs tracking-wider transition active:scale-95 touch-none shadow-lg">
+        🔥 กดค้างไว้เพื่อจุดเทียน (HOLD TO LIGHT)
+      </button>
+
+      <button id="btn-back-craft" class="text-xs text-slate-400 hover:text-slate-200 font-hand underline">
+        &larr; กลับไปจัดกระทงต่อ
+      </button>
+    </div>
+  </div>
+
+
+  <!-- ===================================================================== -->
+  <!-- 4. SERENE RIVER SCENE -->
+  <!-- ===================================================================== -->
+  <main id="view-river" class="hidden fixed inset-0 z-30 overflow-hidden bg-slate-950">
+    <canvas id="river-canvas" class="w-full h-full cursor-pointer"></canvas>
+
+    <!-- River HUD Elements -->
+    <div class="absolute inset-0 pointer-events-none p-6 flex flex-col justify-between">
+      
+      <!-- Top Status -->
+      <div class="flex justify-between items-center w-full">
+        <div class="pointer-events-auto cozy-glass px-4 py-2 rounded-full text-xs text-amber-200 flex items-center gap-2">
+          <span>🌕</span>
+          <span class="font-hand">สายน้ำเจ้าพระยาใต้แสงจันทร์วันเพ็ญ</span>
+        </div>
+        <div class="pointer-events-auto flex gap-2">
+          <button id="btn-sky-lantern" class="px-4 py-2 rounded-full cozy-glass hover:border-amber-400/50 text-xs font-hand text-amber-200 transition">
+            🏮 ปล่อยโคมลอย
+          </button>
+          <button id="btn-open-card" class="px-4 py-2 rounded-full bg-gradient-to-r from-amber-500 to-yellow-400 text-slate-950 text-xs font-medium font-hand shadow-md transition">
+            📷 การ์ดที่ระลึก
+          </button>
+        </div>
+      </div>
+
+      <!-- Release Krathong Prompt Banner -->
+      <div id="river-launch-banner" class="pointer-events-auto self-center cozy-glass p-6 rounded-3xl text-center space-y-3 max-w-sm gold-border-glow">
+        <p class="text-xs font-hand text-slate-200">
+          สายน้ำพร้อมแล้ว... ปล่อยกระทงร่วมกันเพื่อส่งคำอธิษฐาน
+        </p>
+        <button id="btn-release-river" class="w-full py-3 rounded-2xl bg-gradient-to-r from-amber-500 to-yellow-400 text-slate-950 text-xs font-bold font-hand shadow-md active:scale-95 transition">
+          🌊 ปล่อยกระทงลงสู่แม่น้ำ (Release)
+        </button>
+        <p id="label-release-sync" class="text-[11px] font-hand text-slate-400">
+          กดพร้อมกันเพื่อลอยเคียงข้างกันตลอดไป
+        </p>
+      </div>
+
+      <!-- Bottom Hint -->
+      <div class="self-center text-xs font-hand text-slate-300/80 bg-slate-950/60 border border-white/10 px-4 py-1.5 rounded-full pointer-events-auto backdrop-blur-sm">
+        💡 คลิกที่ผิวน้ำเพื่อสร้างระลอกคลื่น หรือคลิกโคมลอยเพื่อส่งใจขึ้นสู่ดวงดาว
+      </div>
+    </div>
+  </main>
+
+
+  <!-- ===================================================================== -->
+  <!-- 5. POLAROID SOUVENIR MODAL -->
+  <!-- ===================================================================== -->
+  <div id="modal-souvenir" class="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md hidden flex items-center justify-center p-4">
+    <div class="w-full max-w-sm cozy-glass rounded-3xl p-6 text-center space-y-4">
+      <div class="flex justify-between items-center px-1">
+        <h4 class="text-sm font-hand font-semibold text-amber-200">การ์ดที่ระลึกวันเพ็ญเดือน ๑๒</h4>
+        <button id="btn-close-card" class="text-slate-400 hover:text-white text-lg">✕</button>
+      </div>
+
+      <!-- High-res Polaroid Canvas -->
+      <div class="p-3 bg-amber-50 rounded-2xl shadow-2xl border-4 border-amber-100 flex justify-center">
+        <canvas id="card-canvas" width="340" height="430" class="w-full rounded-xl bg-slate-950"></canvas>
+      </div>
+
+      <div class="flex gap-2 font-hand">
+        <button id="btn-save-image" class="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-400 text-slate-950 text-xs font-semibold shadow">
+          💾 บันทึกรูปภาพ
+        </button>
+        <button id="btn-share-image" class="px-4 py-2.5 rounded-xl border border-white/20 text-xs text-slate-200 hover:text-white">
+          แชร์
+        </button>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ===================================================================== -->
+  <!-- JAVASCRIPT APPLICATION CODE -->
+  <!-- ===================================================================== -->
+  <script>
+    // --- 1. PROCEDURAL SOUND ENGINE (Zero external files) ---
+    const SoundEngine = {
+      ctx: null, isMuted: true, waterGain: null,
+      init() {
+        if (!this.ctx) {
+          const Ctx = window.AudioContext || window.webkitAudioContext;
+          if (Ctx) this.ctx = new Ctx();
+        }
+      },
+      toggle() {
+        this.init();
+        if (!this.ctx) return false;
+        if (this.ctx.state === 'suspended') this.ctx.resume();
+        this.isMuted = !this.isMuted;
+        if (this.isMuted) {
+          this.stopWater();
+        } else {
+          this.startWater();
+          this.playBell(587.33); // D5 serene tone
+        }
+        return !this.isMuted;
+      },
+      startWater() {
+        if (!this.ctx || this.waterGain) return;
+        const size = this.ctx.sampleRate * 2;
+        const buf = this.ctx.createBuffer(1, size, this.ctx.sampleRate);
+        const out = buf.getChannelData(0);
+        let b0 = 0, b1 = 0;
+        for (let i = 0; i < size; i++) {
+          const white = Math.random() * 2 - 1;
+          b0 = 0.99 * b0 + white * 0.05;
+          b1 = 0.96 * b1 + white * 0.1;
+          out[i] = (b0 + b1) * 0.12;
+        }
+        const src = this.ctx.createBufferSource();
+        src.buffer = buf; src.loop = true;
+        const filter = this.ctx.createBiquadFilter();
+        filter.type = 'lowpass'; filter.frequency.setValueAtTime(400, this.ctx.currentTime);
+        this.waterGain = this.ctx.createGain();
+        this.waterGain.gain.setValueAtTime(0.08, this.ctx.currentTime);
+        src.connect(filter); filter.connect(this.waterGain);
+        this.waterGain.connect(this.ctx.destination);
+        src.start();
+      },
+      stopWater() {
+        if (this.waterGain) {
+          this.waterGain.disconnect();
+          this.waterGain = null;
+        }
+      },
+      playBell(freq = 523.25) {
+        if (this.isMuted || !this.ctx) return;
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const harm = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sine'; osc.frequency.setValueAtTime(freq, now);
+        harm.type = 'triangle'; harm.frequency.setValueAtTime(freq * 2.75, now);
+        gain.gain.setValueAtTime(0.15, now);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + 2.2);
+        osc.connect(gain); harm.connect(gain); gain.connect(this.ctx.destination);
+        osc.start(now); harm.start(now);
+        osc.stop(now + 2.2); harm.stop(now + 2.2);
+      },
+      playPop() {
+        if (this.isMuted || !this.ctx) return;
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.frequency.setValueAtTime(320, now);
+        osc.frequency.exponentialRampToValueAtTime(540, now + 0.08);
+        gain.gain.setValueAtTime(0.12, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.09);
+        osc.connect(gain); gain.connect(this.ctx.destination);
+        osc.start(now); osc.stop(now + 0.09);
+      },
+      playIgnite() {
+        if (this.isMuted || !this.ctx) return;
+        this.playBell(659.25);
+        setTimeout(() => this.playBell(783.99), 160);
+      }
+    };
+
+
+    // --- 2. ART & SPRITE RENDERING ENGINE ---
+    const Sprites = {
+      drawBase(ctx, type, r = 100) {
+        ctx.save();
+        // Drop shadow on water
+        ctx.beginPath();
+        ctx.ellipse(0, 10, r * 1.05, r * 0.95, 0, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(2, 6, 23, 0.6)';
+        ctx.fill();
+
+        if (type === 'bread') {
+          // Turtle Bread Base
+          ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2);
+          ctx.fillStyle = '#b45309'; ctx.fill();
+          ctx.beginPath(); ctx.arc(0, 0, r - 6, 0, Math.PI * 2);
+          ctx.fillStyle = '#d97706'; ctx.fill();
+          ctx.beginPath(); ctx.arc(0, 0, r * 0.6, 0, Math.PI * 2);
+          ctx.fillStyle = '#f59e0b'; ctx.fill();
+        } else if (type === 'ice') {
+          // Glowing Ice Base
+          ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2);
+          ctx.fillStyle = '#0891b2'; ctx.fill();
+          ctx.beginPath(); ctx.arc(0, 0, r - 6, 0, Math.PI * 2);
+          ctx.fillStyle = '#22d3ee'; ctx.fill();
+          ctx.beginPath(); ctx.arc(0, 0, r - 14, 0, Math.PI * 2);
+          ctx.fillStyle = '#cffafe'; ctx.fill();
+        } else {
+          // Traditional Banana Trunk Base
+          ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2);
+          ctx.fillStyle = '#14532d'; ctx.fill();
+          ctx.beginPath(); ctx.arc(0, 0, r - 6, 0, Math.PI * 2);
+          ctx.fillStyle = '#16a34a'; ctx.fill();
+          ctx.beginPath(); ctx.arc(0, 0, r - 12, 0, Math.PI * 2);
+          ctx.fillStyle = '#dcfce7'; ctx.fill();
+          ctx.beginPath(); ctx.arc(0, 0, r * 0.65, 0, Math.PI * 2);
+          ctx.fillStyle = '#f0fdf4'; ctx.fill();
+          ctx.beginPath(); ctx.arc(0, 0, r * 0.28, 0, Math.PI * 2);
+          ctx.fillStyle = '#fef9c3'; ctx.fill();
+        }
+        ctx.restore();
+      },
+
+      drawItem(ctx, item, isLit = false) {
+        ctx.save();
+        ctx.translate(item.x, item.y);
+        if (item.rot) ctx.rotate(item.rot);
+
+        switch (item.type) {
+          case 'petal_folded':
+            // Folded Banana Leaf (กลีบผกา)
+            ctx.beginPath();
+            ctx.moveTo(0, -32); ctx.lineTo(14, 0); ctx.lineTo(6, 18); ctx.lineTo(-6, 18); ctx.lineTo(-14, 0);
+            ctx.closePath();
+            ctx.fillStyle = '#166534'; ctx.fill();
+            ctx.beginPath();
+            ctx.moveTo(0, -28); ctx.lineTo(9, -2); ctx.lineTo(0, 14); ctx.lineTo(-9, -2);
+            ctx.closePath();
+            ctx.fillStyle = '#22c55e'; ctx.fill();
+            // Golden pin
+            ctx.beginPath(); ctx.arc(0, 10, 2.5, 0, Math.PI * 2);
+            ctx.fillStyle = '#fde047'; ctx.fill();
+            break;
+
+          case 'petal_lotus':
+            // Pink Lotus Petal
+            ctx.beginPath();
+            ctx.moveTo(0, -28); ctx.quadraticCurveTo(14, -8, 8, 14); ctx.lineTo(-8, 14); ctx.quadraticCurveTo(-14, -8, 0, -28);
+            ctx.fillStyle = '#ec4899'; ctx.fill();
+            ctx.beginPath();
+            ctx.moveTo(0, -22); ctx.quadraticCurveTo(8, -6, 5, 10); ctx.lineTo(-5, 10); ctx.quadraticCurveTo(-8, -6, 0, -22);
+            ctx.fillStyle = '#fbcfe8'; ctx.fill();
+            break;
+
+          case 'flower_marigold':
+            // Golden Marigold (ดาวเรือง)
+            ctx.beginPath(); ctx.arc(0, 0, 15, 0, Math.PI * 2);
+            ctx.fillStyle = '#d97706'; ctx.fill();
+            for (let i = 0; i < 8; i++) {
+              const a = (i / 8) * Math.PI * 2;
+              ctx.beginPath(); ctx.arc(Math.cos(a) * 8, Math.sin(a) * 8, 6.5, 0, Math.PI * 2);
+              ctx.fillStyle = '#f59e0b'; ctx.fill();
+            }
+            ctx.beginPath(); ctx.arc(0, 0, 7, 0, Math.PI * 2);
+            ctx.fillStyle = '#fef08a'; ctx.fill();
+            break;
+
+          case 'flower_lotus':
+            // Blooming Royal Lotus
+            for (let i = 0; i < 7; i++) {
+              ctx.save(); ctx.rotate((i / 7) * Math.PI * 2);
+              ctx.beginPath(); ctx.ellipse(0, -12, 6, 11, 0, 0, Math.PI * 2);
+              ctx.fillStyle = '#ec4899'; ctx.fill();
+              ctx.restore();
+            }
+            ctx.beginPath(); ctx.arc(0, 0, 8, 0, Math.PI * 2);
+            ctx.fillStyle = '#fde047'; ctx.fill();
+            break;
+
+          case 'flower_orchid':
+            // Thai Purple Orchid
+            for (let i = -1; i <= 1; i++) {
+              ctx.beginPath(); ctx.ellipse(i * 8, -8, 6, 9, i * 0.4, 0, Math.PI * 2);
+              ctx.fillStyle = '#a855f7'; ctx.fill();
+            }
+            ctx.beginPath(); ctx.arc(0, 2, 5, 0, Math.PI * 2);
+            ctx.fillStyle = '#fef08a'; ctx.fill();
+            break;
+
+          case 'flower_crown':
+            // Crown flower (ดอกรัก)
+            ctx.fillStyle = '#f8fafc';
+            for (let i = 0; i < 5; i++) {
+              const a = (i / 5) * Math.PI * 2 - Math.PI / 2;
+              ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(Math.cos(a) * 14, Math.sin(a) * 14);
+              ctx.lineWidth = 4; ctx.strokeStyle = '#f8fafc'; ctx.stroke();
+            }
+            ctx.beginPath(); ctx.arc(0, 0, 4, 0, Math.PI * 2);
+            ctx.fillStyle = '#cbd5e1'; ctx.fill();
+            break;
+
+          case 'candle':
+            // Yellow Candle
+            ctx.fillStyle = '#facc15';
+            ctx.beginPath(); ctx.roundRect(-4, -4, 8, 34, 3); ctx.fill();
+            ctx.fillStyle = '#451a03';
+            ctx.fillRect(-1, -9, 2, 5); // Wick
+
+            if (isLit) {
+              const flick = Math.sin(Date.now() / 90) * 1.5;
+              // Candlelight aura glow
+              const glow = ctx.createRadialGradient(0, -13, 2, 0, -13, 28);
+              glow.addColorStop(0, 'rgba(251, 191, 36, 0.75)');
+              glow.addColorStop(0.5, 'rgba(245, 158, 11, 0.25)');
+              glow.addColorStop(1, 'rgba(245, 158, 11, 0)');
+              ctx.fillStyle = glow;
+              ctx.beginPath(); ctx.arc(0, -13, 28, 0, Math.PI * 2); ctx.fill();
+
+              // Flame Teardrop
+              ctx.beginPath();
+              ctx.moveTo(0, -22 + flick);
+              ctx.quadraticCurveTo(6, -13, 4, -8);
+              ctx.quadraticCurveTo(0, -6, -4, -8);
+              ctx.quadraticCurveTo(-6, -13, 0, -22 + flick);
+              ctx.fillStyle = '#f97316'; ctx.fill();
+
+              ctx.beginPath();
+              ctx.moveTo(0, -18 + flick);
+              ctx.quadraticCurveTo(3.5, -12, 2.5, -8);
+              ctx.quadraticCurveTo(0, -7, -2.5, -8);
+              ctx.quadraticCurveTo(-3.5, -12, 0, -18 + flick);
+              ctx.fillStyle = '#fef08a'; ctx.fill();
+            }
+            break;
+
+          case 'incense':
+            // 3 Incense Sticks
+            [-3.5, 0, 3.5].forEach(x => {
+              ctx.strokeStyle = '#78350f'; ctx.lineWidth = 2;
+              ctx.beginPath(); ctx.moveTo(x, 24); ctx.lineTo(x, -24); ctx.stroke();
+              // Glowing Ember
+              ctx.beginPath(); ctx.arc(x, -24, isLit ? 2 : 1.5, 0, Math.PI * 2);
+              ctx.fillStyle = isLit ? '#ef4444' : '#451a03'; ctx.fill();
+            });
+            break;
+        }
+        ctx.restore();
+      }
+    };
+
+
+    // --- 3. APPLICATION STATE & NETWORKING ---
+    const appState = {
+      name: 'ฉัน',
+      room: null,
+      isHost: false,
+      isSolo: false,
+      partner: { name: 'คู่หู', wish: '', isConnected: false, isHolding: false },
+      krathong: { base: 'banana', items: [] },
+      selectedType: 'petal_folded',
+      isHolding: false,
+      isLit: false,
+      released: false,
+      partnerReleased: false
+    };
+
+    let peer = null, conn = null, bc = null;
+
+    function initNetwork(roomId, isHost) {
+      appState.room = roomId; appState.isHost = isHost;
+      document.getElementById('room-tag').classList.remove('hidden');
+      document.getElementById('room-tag').classList.add('flex');
+      document.getElementById('room-code-label').textContent = `ROOM: ${roomId}`;
+
+      try {
+        if (window.BroadcastChannel) {
+          bc = new BroadcastChannel(`lkt-${roomId}`);
+          bc.onmessage = (e) => handleNetworkMessage(e.data);
+        }
+      } catch (e) {}
+
+      if (typeof Peer !== 'undefined') {
+        peer = isHost ? new Peer(`lkt-${roomId.toLowerCase()}`) : new Peer();
+        peer.on('connection', c => { conn = c; bindConnection(); });
+        if (!isHost) {
+          peer.on('open', () => {
+            conn = peer.connect(`lkt-${roomId.toLowerCase()}`, { reliable: true });
+            bindConnection();
+          });
+        }
+      }
+    }
+
+    function bindConnection() {
+      if (!conn) return;
+      conn.on('open', () => {
+        appState.partner.isConnected = true;
+        updatePartnerDisplay();
+        sendNet({ type: 'HANDSHAKE', name: appState.name, wish: document.getElementById('box-self-wish').value });
+      });
+      conn.on('data', data => handleNetworkMessage(data));
+      conn.on('close', () => {
+        appState.partner.isConnected = false;
+        updatePartnerDisplay();
+      });
+    }
+
+    function sendNet(payload) {
+      if (conn && conn.open) conn.send(payload);
+      if (bc) bc.postMessage(payload);
+    }
+
+    function handleNetworkMessage(msg) {
+      if (!msg || !msg.type) return;
+      switch (msg.type) {
+        case 'HANDSHAKE':
+          appState.partner.name = msg.name || 'คู่หู';
+          appState.partner.wish = msg.wish || '';
+          appState.partner.isConnected = true;
+          updatePartnerDisplay();
+          if (appState.isHost) {
+            sendNet({ type: 'SYNC_ALL', name: appState.name, krathong: appState.krathong, wish: document.getElementById('box-self-wish').value });
+          }
+          break;
+
+        case 'SYNC_ALL':
+          appState.partner.name = msg.name || 'คู่หู';
+          appState.krathong = msg.krathong || appState.krathong;
+          appState.partner.wish = msg.wish || '';
+          appState.partner.isConnected = true;
+          updatePartnerDisplay();
+          renderCraft();
+          break;
+
+        case 'CURSOR':
+          updatePartnerCursor(msg.x, msg.y);
+          break;
+
+        case 'BASE':
+          appState.krathong.base = msg.base;
+          renderCraft();
+          break;
+
+        case 'ADD_ITEM':
+          appState.krathong.items.push(msg.item);
+          renderCraft();
+          SoundEngine.playPop();
+          break;
+
+        case 'UNDO':
+          appState.krathong.items.pop();
+          renderCraft();
+          break;
+
+        case 'CLEAR':
+          appState.krathong.items = [];
+          renderCraft();
+          break;
+
+        case 'WISH':
+          appState.partner.wish = msg.wish;
+          document.getElementById('text-partner-wish').textContent = `"${msg.wish || '...'}"`;
+          break;
+
+        case 'HOLD':
+          appState.partner.isHolding = msg.holding;
+          document.getElementById('visual-match-p2').textContent = msg.holding ? '🔥' : '🪵';
+          checkDualIgnition();
+          break;
+
+        case 'IGNITED':
+          igniteCandleCeremony();
+          break;
+
+        case 'RELEASE':
+          appState.partnerReleased = true;
+          if (appState.released) startRiverCruise();
+          break;
+
+        case 'RIVER_ACTION':
+          if (msg.action === 'ripple' && riverEngine) riverEngine.addRipple(msg.x, msg.y);
+          if (msg.action === 'lantern' && riverEngine) riverEngine.spawnLantern();
+          break;
+      }
+    }
+
+    function updatePartnerDisplay() {
+      const isConn = appState.partner.isConnected || appState.isSolo;
+      document.getElementById('partner-status-dot').className = `w-2.5 h-2.5 rounded-full ${isConn ? 'bg-emerald-400' : 'bg-slate-500'}`;
+      document.getElementById('partner-status-text').textContent = isConn ? `คู่หู: ${appState.partner.name} ✨` : 'กำลังรอคู่หู...';
+      document.getElementById('label-partner-name').textContent = `🌙 ${appState.partner.name}`;
+      document.getElementById('pill-partner-status').textContent = isConn ? 'ONLINE' : 'WAITING';
+      document.getElementById('pill-partner-status').className = `text-[10px] font-mono ${isConn ? 'text-emerald-400' : 'text-slate-500'}`;
+      document.getElementById('label-match-p2').textContent = appState.partner.name;
+      if (appState.partner.wish) {
+        document.getElementById('text-partner-wish').textContent = `"${appState.partner.wish}"`;
+      }
+    }
+
+    function updatePartnerCursor(relX, relY) {
+      const cur = document.getElementById('partner-cursor');
+      const canvas = document.getElementById('craft-canvas');
+      const rect = canvas.getBoundingClientRect();
+      cur.classList.remove('hidden');
+      cur.style.transform = `translate(${rect.left + relX * rect.width}px, ${rect.top + relY * rect.height}px)`;
+      document.getElementById('partner-cursor-label').textContent = appState.partner.name;
+    }
+
+
+    // --- 4. CRAFTING CANVAS CONTROLLER ---
+    const craftCanvas = document.getElementById('craft-canvas');
+    const craftCtx = craftCanvas.getContext('2d');
+
+    function renderCraft() {
+      craftCtx.clearRect(0, 0, 440, 440);
+      craftCtx.save();
+      craftCtx.translate(220, 220);
+
+      // Base
+      Sprites.drawBase(craftCtx, appState.krathong.base, 105);
+
+      // Sorting: Petals -> Flowers -> Sacred items on top
+      const depth = { petal_folded: 1, petal_lotus: 1, flower_marigold: 2, flower_lotus: 2, flower_orchid: 2, flower_crown: 2, candle: 3, incense: 4 };
+      const sorted = [...appState.krathong.items].sort((a, b) => (depth[a.type] || 2) - (depth[b.type] || 2));
+      sorted.forEach(it => Sprites.drawItem(craftCtx, it, appState.isLit));
+
+      craftCtx.restore();
+
+      // Stats
+      document.getElementById('stat-items').textContent = `${appState.krathong.items.length} ชิ้น`;
+      const hasCandle = appState.krathong.items.some(i => i.type === 'candle');
+      const hasIncense = appState.krathong.items.some(i => i.type === 'incense');
+      const sacredEl = document.getElementById('stat-sacred');
+      if (hasCandle && hasIncense) {
+        sacredEl.textContent = 'ครบถ้วนสมบูรณ์ ✨';
+        sacredEl.className = 'text-emerald-400 font-hand';
+      } else {
+        sacredEl.textContent = 'ยังขาดธูปหรือเทียน';
+        sacredEl.className = 'text-amber-400 font-hand';
+      }
+    }
+
+    craftCanvas.addEventListener('click', (e) => {
+      const rect = craftCanvas.getBoundingClientRect();
+      const x = (e.clientX - rect.left) * (440 / rect.width) - 220;
+      const y = (e.clientY - rect.top) * (440 / rect.height) - 220;
+
+      if (Math.hypot(x, y) > 135) return;
+
+      let rot = Math.atan2(y, x) + Math.PI / 2;
+      if (appState.selectedType === 'candle' || appState.selectedType === 'incense') rot = 0;
+
+      const item = { type: appState.selectedType, x, y, rot };
+      appState.krathong.items.push(item);
+      renderCraft();
+      SoundEngine.playPop();
+      sendNet({ type: 'ADD_ITEM', item });
+    });
+
+    craftCanvas.addEventListener('mousemove', (e) => {
+      if (appState.isSolo) return;
+      const rect = craftCanvas.getBoundingClientRect();
+      const relX = (e.clientX - rect.left) / rect.width;
+      const relY = (e.clientY - rect.top) / rect.height;
+      sendNet({ type: 'CURSOR', x: relX, y: relY });
+    });
+
+
+    // --- 5. DUAL MATCH HOLD CEREMONY ---
+    function checkDualIgnition() {
+      const p1 = appState.isHolding;
+      const p2 = appState.isSolo || appState.partner.isHolding;
+      if (p1 && p2 && !appState.isLit) {
+        igniteCandleCeremony();
+        sendNet({ type: 'IGNITED' });
+      }
+    }
+
+    function igniteCandleCeremony() {
+      appState.isLit = true;
+      SoundEngine.playIgnite();
+
+      const spark = document.getElementById('visual-spark');
+      spark.textContent = '🔥✨';
+      spark.classList.add('candle-bloom');
+
+      if (typeof confetti === 'function') {
+        confetti({ particleCount: 60, spread: 70, origin: { y: 0.6 }, colors: ['#f59e0b', '#ec4899', '#fef08a'] });
+      }
+
+      // Auto ensure candle exists if not placed
+      if (!appState.krathong.items.some(i => i.type === 'candle')) {
+        appState.krathong.items.push({ type: 'candle', x: 0, y: -5, rot: 0 });
+        renderCraft();
+      }
+
+      setTimeout(() => {
+        document.getElementById('modal-light').classList.add('hidden');
+        document.getElementById('view-workshop').classList.add('hidden');
+        document.getElementById('view-river').classList.remove('hidden');
+        initRiverCanvas();
+      }, 1600);
+    }
+
+
+    // --- 6. SERENE NIGHT RIVER SIMULATION ---
+    let riverEngine = null;
+    function initRiverCanvas() {
+      const canvas = document.getElementById('river-canvas');
+      const ctx = canvas.getContext('2d');
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+
+      const ripples = [];
+      const lanterns = [];
+      const fireflies = [];
+      let krathongX = canvas.width * 0.5;
+      let krathongY = canvas.height * 0.74;
+
+      // Spawn initial ambient fireflies
+      for (let i = 0; i < 22; i++) {
+        fireflies.push({
+          x: Math.random() * canvas.width,
+          y: canvas.height * 0.45 + Math.random() * (canvas.height * 0.5),
+          vx: (Math.random() - 0.5) * 0.35,
+          vy: (Math.random() - 0.5) * 0.25,
+          phase: Math.random() * Math.PI * 2
+        });
+      }
+
+      riverEngine = {
+        addRipple(x, y) { ripples.push({ x, y, r: 4, op: 0.8 }); },
+        spawnLantern() {
+          lanterns.push({
+            x: canvas.width * 0.2 + Math.random() * (canvas.width * 0.6),
+            y: canvas.height * 0.85,
+            vy: -(0.5 + Math.random() * 0.5),
+            sway: Math.random() * Math.PI * 2
+          });
+          SoundEngine.playPop();
+        }
+      };
+
+      canvas.addEventListener('click', (e) => {
+        riverEngine.addRipple(e.clientX, e.clientY);
+        SoundEngine.playPop();
+        sendNet({ type: 'RIVER_ACTION', action: 'ripple', x: e.clientX, y: e.clientY });
+      });
+
+      function loop() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        const now = Date.now();
+        const horizon = canvas.height * 0.52;
+
+        // 1. Sky Gradient
+        const sky = ctx.createLinearGradient(0, 0, 0, horizon);
+        sky.addColorStop(0, '#060a16'); sky.addColorStop(0.7, '#0c1328'); sky.addColorStop(1, '#16203f');
+        ctx.fillStyle = sky; ctx.fillRect(0, 0, canvas.width, horizon);
+
+        // 2. Full Moon
+        const moonX = canvas.width * 0.82;
+        const moonY = canvas.height * 0.16;
+        const moonGlow = ctx.createRadialGradient(moonX, moonY, 15, moonX, moonY, 100);
+        moonGlow.addColorStop(0, 'rgba(254, 243, 199, 0.45)');
+        moonGlow.addColorStop(0.6, 'rgba(251, 191, 36, 0.1)');
+        moonGlow.addColorStop(1, 'rgba(251, 191, 36, 0)');
+        ctx.fillStyle = moonGlow; ctx.beginPath(); ctx.arc(moonX, moonY, 100, 0, Math.PI * 2); ctx.fill();
+
+        ctx.beginPath(); ctx.arc(moonX, moonY, 36, 0, Math.PI * 2);
+        ctx.fillStyle = '#fef3c7'; ctx.fill();
+
+        // 3. Water Gradient
+        const water = ctx.createLinearGradient(0, horizon, 0, canvas.height);
+        water.addColorStop(0, '#0a1428'); water.addColorStop(0.4, '#0d1c38'); water.addColorStop(1, '#030611');
+        ctx.fillStyle = water; ctx.fillRect(0, horizon, canvas.width, canvas.height - horizon);
+
+        // 4. Moon Reflection Rays
+        for (let y = horizon; y < canvas.height; y += 7) {
+          const p = (y - horizon) / (canvas.height - horizon);
+          const wave = Math.sin(y * 0.06 + now / 320) * (14 + p * 20);
+          const span = (70 + p * 90) * (0.6 + Math.sin(y * 0.1) * 0.4);
+          ctx.fillStyle = `rgba(254, 243, 199, ${0.16 - p * 0.1})`;
+          ctx.fillRect(moonX + wave - span / 2, y, span, 3.5);
+        }
+
+        // 5. Water Ripples
+        for (let i = ripples.length - 1; i >= 0; i--) {
+          const rip = ripples[i]; rip.r += 0.75; rip.op -= 0.012;
+          ctx.beginPath(); ctx.ellipse(rip.x, rip.y, rip.r * 2.2, rip.r * 0.75, 0, 0, Math.PI * 2);
+          ctx.strokeStyle = `rgba(186, 230, 253, ${rip.op})`; ctx.lineWidth = 1.5; ctx.stroke();
+          if (rip.op <= 0) ripples.splice(i, 1);
+        }
+
+        // 6. Sky Lanterns
+        for (let i = lanterns.length - 1; i >= 0; i--) {
+          const l = lanterns[i];
+          l.sway += 0.03; l.x += Math.sin(l.sway) * 0.3; l.y += l.vy;
+          // Glow
+          ctx.beginPath(); ctx.arc(l.x, l.y, 16, 0, Math.PI * 2);
+          ctx.fillStyle = 'rgba(251, 191, 36, 0.2)'; ctx.fill();
+          // Lantern
+          ctx.fillStyle = '#fef08a';
+          ctx.beginPath(); ctx.roundRect(l.x - 7, l.y - 10, 14, 18, 3); ctx.fill();
+          if (l.y < -30) lanterns.splice(i, 1);
+        }
+
+        // 7. Fireflies
+        fireflies.forEach(f => {
+          f.x += f.vx; f.y += f.vy;
+          if (f.x < 0) f.x = canvas.width; if (f.x > canvas.width) f.x = 0;
+          if (f.y < horizon) f.y = canvas.height; if (f.y > canvas.height) f.y = horizon;
+          const a = (Math.sin(now * 0.005 + f.phase) + 1) * 0.5;
+          ctx.fillStyle = `rgba(250, 204, 21, ${a * 0.85})`;
+          ctx.fillRect(f.x, f.y, 2.5, 2.5);
+        });
+
+        // 8. The Couple's Main Krathong
+        if (appState.released && appState.partnerReleased) {
+          krathongX += 0.36; // Peaceful drift downstream
+          if (krathongX > canvas.width + 120) krathongX = -100;
+        }
+
+        const bob = Math.sin(now / 480) * 3;
+        ctx.save();
+        ctx.translate(krathongX, krathongY + bob);
+
+        // Candlelight water pool
+        const waterGlow = ctx.createRadialGradient(0, 15, 10, 0, 15, 120);
+        waterGlow.addColorStop(0, 'rgba(251, 191, 36, 0.45)');
+        waterGlow.addColorStop(0.5, 'rgba(245, 158, 11, 0.15)');
+        waterGlow.addColorStop(1, 'rgba(245, 158, 11, 0)');
+        ctx.fillStyle = waterGlow;
+        ctx.beginPath(); ctx.ellipse(0, 15, 120, 40, 0, 0, Math.PI * 2); ctx.fill();
+
+        ctx.scale(0.68, 0.68);
+        Sprites.drawBase(ctx, appState.krathong.base, 105);
+        appState.krathong.items.forEach(it => Sprites.drawItem(ctx, it, true));
+
+        // Floating Paper Wish Tags
+        drawTag(ctx, -65, 35, appState.name, document.getElementById('box-self-wish').value, '#fef08a');
+        drawTag(ctx, 65, 35, appState.partner.name, appState.partner.wish, '#fbcfe8');
+
+        ctx.restore();
+
+        requestAnimationFrame(loop);
+      }
+      loop();
+    }
+
+    function drawTag(ctx, x, y, name, wish, color) {
+      if (!name) return;
+      ctx.save(); ctx.translate(x, y);
+      ctx.fillStyle = color;
+      ctx.beginPath(); ctx.roundRect(-28, 0, 56, 24, 4); ctx.fill();
+      ctx.fillStyle = '#0f172a'; ctx.font = 'bold 9px Prompt, sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText(name.slice(0, 8), 0, 11);
+      if (wish) {
+        ctx.fillStyle = '#451a03'; ctx.font = '8px Mali, cursive';
+        ctx.fillText(wish.slice(0, 8) + '..', 0, 20);
+      }
+      ctx.restore();
+    }
+
+    function startRiverCruise() {
+      document.getElementById('river-launch-banner').classList.add('hidden');
+      SoundEngine.playBell(783.99);
+    }
+
+
+    // --- 7. POLAROID POSTCARD GENERATOR ---
+    function renderPolaroid() {
+      const pc = document.getElementById('card-canvas');
+      const pctx = pc.getContext('2d');
+      const w = pc.width, h = pc.height;
+
+      pctx.clearRect(0, 0, w, h);
+      pctx.fillStyle = '#fefdfa'; pctx.fillRect(0, 0, w, h);
+
+      // Photo Window
+      const px = 14, py = 14, pw = w - 28, ph = 270;
+      pctx.save();
+      pctx.beginPath(); pctx.rect(px, py, pw, ph); pctx.clip();
+
+      const bg = pctx.createLinearGradient(px, py, px, py + ph);
+      bg.addColorStop(0, '#060a16'); bg.addColorStop(0.6, '#0d1830'); bg.addColorStop(1, '#030611');
+      pctx.fillStyle = bg; pctx.fillRect(px, py, pw, ph);
+
+      // Moon
+      pctx.beginPath(); pctx.arc(px + pw * 0.82, py + 40, 18, 0, Math.PI * 2);
+      pctx.fillStyle = '#fef08a'; pctx.fill();
+
+      // Krathong
+      pctx.translate(px + pw * 0.5, py + ph * 0.72);
+      pctx.scale(0.48, 0.48);
+      Sprites.drawBase(pctx, appState.krathong.base, 105);
+      appState.krathong.items.forEach(it => Sprites.drawItem(pctx, it, true));
+      pctx.restore();
+
+      // Handwritten Captions
+      pctx.fillStyle = '#0f172a'; pctx.font = '600 14px Prompt, sans-serif'; pctx.textAlign = 'center';
+      pctx.fillText(`${appState.name} & ${appState.partner.name}`, w / 2, py + ph + 28);
+
+      pctx.fillStyle = '#78350f'; pctx.font = '12px Mali, cursive';
+      const wishText = document.getElementById('box-self-wish').value || 'ขอให้สมหวังในทุกสิ่ง';
+      pctx.fillText(`"${wishText.slice(0, 28)}"`, w / 2, py + ph + 52);
+
+      pctx.fillStyle = '#94a3b8'; pctx.font = '9px Prompt, sans-serif';
+      const dateStr = new Date().toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' });
+      pctx.fillText(`LOY KRATHONG • ${dateStr} • ROOM ${appState.room || 'SOLO'}`, w / 2, h - 14);
+    }
+
+
+    // --- 8. UI EVENT BINDINGS ---
+    // Audio Toggle
+    document.getElementById('btn-audio').addEventListener('click', () => {
+      const on = SoundEngine.toggle();
+      document.getElementById('audio-icon').textContent = on ? '🔊' : '🔇';
+    });
+
+    // Avatar Randomizer
+    const avatars = ['🌸', '🌙', '🪷', '🕯️', '✨', '🐱', '🏮'];
+    let avIdx = 0;
+    document.getElementById('avatar-pill').addEventListener('click', () => {
+      avIdx = (avIdx + 1) % avatars.length;
+      document.getElementById('avatar-pill').textContent = avatars[avIdx];
+    });
+
+    // Create Room
+    document.getElementById('btn-create-room').addEventListener('click', () => {
+      SoundEngine.init();
+      appState.name = document.getElementById('input-player-name').value.trim() || 'ฉัน';
+      document.getElementById('label-self-name').textContent = `${avatars[avIdx]} ${appState.name}`;
+      const code = Math.random().toString(36).substring(2, 6).toUpperCase();
+      initNetwork(code, true);
+      document.getElementById('view-lobby').classList.add('hidden');
+      document.getElementById('view-workshop').classList.remove('hidden');
+      renderCraft();
+    });
+
+    // Join Room
+    document.getElementById('btn-join-room').addEventListener('click', () => {
+      const code = document.getElementById('input-join-code').value.trim().toUpperCase();
+      if (!code) return;
+      SoundEngine.init();
+      appState.name = document.getElementById('input-player-name').value.trim() || 'ฉัน';
+      document.getElementById('label-self-name').textContent = `${avatars[avIdx]} ${appState.name}`;
+      initNetwork(code, false);
+      document.getElementById('view-lobby').classList.add('hidden');
+      document.getElementById('view-workshop').classList.remove('hidden');
+      renderCraft();
+    });
+
+    // Solo Mode
+    document.getElementById('btn-solo-mode').addEventListener('click', () => {
+      SoundEngine.init();
+      appState.name = document.getElementById('input-player-name').value.trim() || 'ฉัน';
+      appState.isSolo = true;
+      appState.partner = { name: 'สายน้ำเจ้าพระยา', wish: 'ขอให้สายน้ำนำพาความสุขร่มเย็น', isConnected: true };
+      appState.partnerReleased = true;
+      document.getElementById('label-self-name').textContent = `${avatars[avIdx]} ${appState.name}`;
+      document.getElementById('view-lobby').classList.add('hidden');
+      document.getElementById('view-workshop').classList.remove('hidden');
+      updatePartnerDisplay();
+      renderCraft();
+    });
+
+    // Copy Link
+    document.getElementById('btn-copy-link').addEventListener('click', () => {
+      const url = `${window.location.origin}${window.location.pathname}?room=${appState.room}`;
+      navigator.clipboard.writeText(url).then(() => {
+        document.getElementById('btn-copy-link').textContent = 'คัดลอกแล้ว!';
+        setTimeout(() => document.getElementById('btn-copy-link').textContent = 'คัดลอกลิงก์', 2000);
+      });
+    });
+
+    // Base Selection
+    document.querySelectorAll('.base-pill').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.base-pill').forEach(b => {
+          b.className = 'base-pill p-2 rounded-xl border border-white/10 hover:border-white/20 text-slate-300 text-center font-hand';
+        });
+        btn.className = 'base-pill active p-2 rounded-xl border border-amber-400 bg-amber-400/15 text-amber-200 text-center font-hand';
+        appState.krathong.base = btn.dataset.base;
+        renderCraft();
+        sendNet({ type: 'BASE', base: appState.krathong.base });
+      });
+    });
+
+    // Item Selection
+    document.querySelectorAll('.item-pill').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.item-pill').forEach(b => {
+          b.className = 'item-pill p-2 rounded-xl border border-white/10 hover:border-white/20 text-slate-300 text-center font-hand';
+        });
+        btn.className = 'item-pill active p-2 rounded-xl border border-amber-400 bg-amber-400/15 text-amber-200 text-center font-hand';
+        appState.selectedType = btn.dataset.type;
+      });
+    });
+
+    // Undo & Clear
+    document.getElementById('btn-undo-item').addEventListener('click', () => {
+      appState.krathong.items.pop();
+      renderCraft();
+      sendNet({ type: 'UNDO' });
+    });
+
+    document.getElementById('btn-clear-canvas').addEventListener('click', () => {
+      appState.krathong.items = [];
+      renderCraft();
+      sendNet({ type: 'CLEAR' });
+    });
+
+    // Auto arrange shortcuts
+    document.getElementById('btn-quick-ring').addEventListener('click', () => {
+      const type = appState.selectedType.includes('petal') ? appState.selectedType : 'petal_folded';
+      for (let i = 0; i < 12; i++) {
+        const a = (i / 12) * Math.PI * 2;
+        appState.krathong.items.push({
+          type, x: Math.cos(a) * 90, y: Math.sin(a) * 90, rot: a + Math.PI / 2
+        });
+      }
+      renderCraft();
+      SoundEngine.playPop();
+    });
+
+    document.getElementById('btn-quick-scatter').addEventListener('click', () => {
+      const pool = ['flower_marigold', 'flower_lotus', 'flower_orchid', 'flower_crown'];
+      for (let i = 0; i < 8; i++) {
+        const a = Math.random() * Math.PI * 2;
+        const d = 20 + Math.random() * 55;
+        appState.krathong.items.push({
+          type: pool[Math.floor(Math.random() * pool.length)],
+          x: Math.cos(a) * d, y: Math.sin(a) * d, rot: Math.random() * Math.PI * 2
+        });
+      }
+      renderCraft();
+      SoundEngine.playPop();
+    });
+
+    // Wish input sync
+    document.getElementById('box-self-wish').addEventListener('input', (e) => {
+      sendNet({ type: 'WISH', wish: e.target.value });
+    });
+
+    // Modal Opening
+    document.getElementById('btn-open-light-modal').addEventListener('click', () => {
+      document.getElementById('modal-light').classList.remove('hidden');
+    });
+
+    document.getElementById('btn-back-craft').addEventListener('click', () => {
+      document.getElementById('modal-light').classList.add('hidden');
+    });
+
+    // Hold to light
+    const strikeBtn = document.getElementById('btn-strike-hold');
+    const startHolding = () => {
+      if (appState.isLit) return;
+      appState.isHolding = true;
+      document.getElementById('visual-match-p1').textContent = '🔥';
+      sendNet({ type: 'HOLD', holding: true });
+      checkDualIgnition();
+    };
+    const stopHolding = () => {
+      if (appState.isLit) return;
+      appState.isHolding = false;
+      document.getElementById('visual-match-p1').textContent = '🪵';
+      sendNet({ type: 'HOLD', holding: false });
+    };
+    strikeBtn.addEventListener('pointerdown', startHolding);
+    window.addEventListener('pointerup', stopHolding);
+
+    // River Launch
+    document.getElementById('btn-release-river').addEventListener('click', () => {
+      appState.released = true;
+      sendNet({ type: 'RELEASE' });
+      if (appState.isSolo || appState.partnerReleased) {
+        startRiverCruise();
+      } else {
+        document.getElementById('label-release-sync').textContent = 'คุณพร้อมแล้ว! รอคู่หูกด...';
+      }
+    });
+
+    document.getElementById('btn-sky-lantern').addEventListener('click', () => {
+      if (riverEngine) {
+        riverEngine.spawnLantern();
+        sendNet({ type: 'RIVER_ACTION', action: 'lantern' });
+      }
+    });
+
+    // Souvenir Modal
+    document.getElementById('btn-open-card').addEventListener('click', () => {
+      renderPolaroid();
+      document.getElementById('modal-souvenir').classList.remove('hidden');
+    });
+
+    document.getElementById('btn-close-card').addEventListener('click', () => {
+      document.getElementById('modal-souvenir').classList.add('hidden');
+    });
+
+    document.getElementById('btn-save-image').addEventListener('click', () => {
+      const pc = document.getElementById('card-canvas');
+      const a = document.createElement('a');
+      a.download = `loy-krathong-${appState.room || 'coop'}.png`;
+      a.href = pc.toDataURL();
+      a.click();
+    });
+
+    document.getElementById('btn-share-image').addEventListener('click', () => {
+      const pc = document.getElementById('card-canvas');
+      if (navigator.share) {
+        pc.toBlob(blob => {
+          const file = new File([blob], 'loy-krathong.png', { type: 'image/png' });
+          navigator.share({
+            title: 'Loy Krathong Co-op',
+            text: `การ์ดลอยกระทงคู่ของ ${appState.name} & ${appState.partner.name} ✨`,
+            files: [file]
+          }).catch(() => {});
+        });
+      } else {
+        const a = document.createElement('a');
+        a.download = `loy-krathong-${appState.room || 'coop'}.png`;
+        a.href = pc.toDataURL();
+        a.click();
+      }
+    });
+
+    // Check Room URL
+    const urlRoom = new URLSearchParams(window.location.search).get('room');
+    if (urlRoom) {
+      document.getElementById('input-join-code').value = urlRoom.toUpperCase();
+    }
+
+    // Sky Background Animation (Lobby / Idle)
+    const skyCanvas = document.getElementById('sky-canvas');
+    const sCtx = skyCanvas.getContext('2d');
+    function resizeSky() { skyCanvas.width = window.innerWidth; skyCanvas.height = window.innerHeight; }
+    window.addEventListener('resize', resizeSky); resizeSky();
+
+    const skyStars = [];
+    for (let i = 0; i < 60; i++) {
+      skyStars.push({ x: Math.random() * window.innerWidth, y: Math.random() * window.innerHeight * 0.7, r: Math.random() * 1.5, tw: Math.random() * Math.PI * 2 });
+    }
+
+    function renderSky() {
+      sCtx.clearRect(0, 0, skyCanvas.width, skyCanvas.height);
+      const t = Date.now() / 400;
+      skyStars.forEach(s => {
+        const op = 0.3 + Math.sin(t + s.tw) * 0.35;
+        sCtx.fillStyle = `rgba(254, 240, 138, ${op})`;
+        sCtx.beginPath(); sCtx.arc(s.x, s.y, s.r, 0, Math.PI * 2); sCtx.fill();
+      });
+      requestAnimationFrame(renderSky);
+    }
+    renderSky();
+  </script>
+</body>
+</html>
